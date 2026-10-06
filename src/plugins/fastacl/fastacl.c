@@ -3,6 +3,8 @@
  */
 
 #include <fastacl/fastacl.h>
+#include <fastacl/members_only/members_only.h>
+#include <math.h>
 #include <vlib/stats/stats.h>
 #include <vnet/plugin/plugin.h>
 #include <vpp/app/version.h>
@@ -23,11 +25,19 @@ fastacl_config (vlib_main_t *vm, unformat_input_t *input)
   fastacl_main_t *fsm = &fastacl_main;
   u32 buckets_val;
   u32 memory_mb_val;
+  f64 check_interval;
 
   while (unformat_check_input (input) != UNFORMAT_END_OF_INPUT)
     {
       if (unformat (input, "tss-bihash-buckets %u", &buckets_val))
 	fsm->tss_buckets = clib_max (buckets_val, FASTACL_TSS_BUCKETS_MIN);
+      else if (unformat (input, "members-only-check-interval %f", &check_interval))
+        {
+          if (!isfinite (check_interval) || check_interval <= 0)
+            return clib_error_return (
+              0, "members-only-check-interval must be finite and greater than zero");
+          fastacl_members_only_check_interval = check_interval;
+        }
       else if (unformat (input, "tss-bihash-memory-mb %u", &memory_mb_val))
 	vlib_log_warn (
 	  fsm->log_class,

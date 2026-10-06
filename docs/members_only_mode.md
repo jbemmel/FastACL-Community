@@ -349,8 +349,19 @@ the subnet into the current bank. Approximate expiry may therefore require
 revalidation before the full configured window has elapsed. It is not a strict
 per-subnet TTL.
 
-A VPP process checks rotation every 0.5 seconds and clears/reuses banks under a
-worker barrier. Queries also check bank age, so delayed maintenance cannot
+A VPP process checks rotation every 5 seconds by default and clears/reuses banks
+under a worker barrier. Set the global check interval in the VPP startup config:
+
+```text
+fastacl {
+  members-only-check-interval 5
+}
+```
+
+The interval is in seconds, accepts fractional values, and must be finite and
+greater than zero. It applies to all zones and requires a VPP restart to change.
+Choose a shorter interval for short validity windows to reduce maintenance lag.
+Queries also check bank age, so delayed maintenance cannot
 extend approvals beyond the configured window. A delay can shorten the lifetime
 of a newly learned subnet, since the active epoch has not yet advanced. Long
 process delays clear both old banks rather than resurrecting stale approvals.

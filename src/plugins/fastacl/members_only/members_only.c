@@ -10,6 +10,7 @@
 #include <string.h>
 
 fastacl_members_only_zone_t *fastacl_members_only_zones;
+f64 fastacl_members_only_check_interval = 5.0;
 
 fastacl_members_only_zone_t *
 fastacl_members_only_zone_find (const char *name)
@@ -121,7 +122,8 @@ fastacl_members_only_process (vlib_main_t *vm, vlib_node_runtime_t *rt,
 {
   while (1)
     {
-      vlib_process_wait_for_event_or_clock (vm, 0.5);
+      vlib_process_wait_for_event_or_clock (
+        vm, fastacl_members_only_check_interval);
       uword *events = NULL;
       vlib_process_get_events (vm, &events);
       vec_free (events);

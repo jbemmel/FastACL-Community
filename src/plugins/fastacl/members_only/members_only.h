@@ -19,6 +19,8 @@ typedef struct
 } fastacl_members_only_zone_t;
 
 extern fastacl_members_only_zone_t *fastacl_members_only_zones;
+/* Global maintenance cadence in seconds, configured at startup. */
+extern f64 fastacl_members_only_check_interval;
 
 /* Call these control-plane operations on the main thread. They synchronize
  * publication, reclamation and clearing with packet workers internally. */
