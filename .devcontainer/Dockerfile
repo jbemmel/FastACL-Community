@@ -12,7 +12,7 @@ RUN apt-get update \
     && echo "deb [signed-by=/usr/share/keyrings/fdio.gpg] https://packagecloud.io/fdio/${VPP_REPO}/ubuntu/ noble main" \
        > /etc/apt/sources.list.d/fdio.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends vpp-dev libvppinfra-dev \
+    && apt-get install -y --no-install-recommends vpp vpp-dev libvppinfra-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Ubuntu supplies a UID 1000 user; reuse it for writable bind-mounted sources.

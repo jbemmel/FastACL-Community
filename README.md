@@ -88,7 +88,8 @@ plugins {
 
 Open the repository in VS Code and select **Dev Containers: Reopen in
 Container**. The container uses Ubuntu 24.04, the FD.io VPP 25.10 development
-packages, and the compiler, CMake, Ninja, Python API-generation dependencies,
+and runtime packages (including `libsvm` for the CLI tests), and the compiler,
+CMake, Ninja, Python API-generation dependencies,
 libnl headers, and GDB. It configures and builds the plugin automatically in
 `build/devcontainer`, separate from host builds.
 
