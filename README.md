@@ -46,6 +46,12 @@ built inside a VPP tree.
   `ip4-unicast` / `ip6-unicast` arcs and to `l2-input-ip4` / `l2-input-ip6`.
 - **VPP binary API and CLI** for every operation.
 
+The [members-only mode design](docs/members_only_mode.md) targets efficient,
+scalable source-network admission for multi-tenant fabrics with high change
+rates, using scoped membership and compact lookups. The first prototype provides
+configurable IPv4 /24 Bloom-filter storage and a CLI; tenant/service binding,
+packet learning, and enforcement remain planned work.
+
 ## Building
 
 The plugin builds out-of-tree against installed VPP development packages.
