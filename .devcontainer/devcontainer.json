@@ -1,0 +1,23 @@
+{
+  "name": "FastACL VPP development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "args": {
+      "VPP_REPO": "2510"
+    }
+  },
+  "remoteUser": "developer",
+  "workspaceFolder": "/workspaces/FastACL-Community",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/FastACL-Community,type=bind",
+  "postCreateCommand": "cmake -S . -B build/devcontainer -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build/devcontainer",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools", "ms-vscode.cmake-tools", "openai.chatgpt"],
+      "settings": {
+        "cmake.buildDirectory": "${workspaceFolder}/build/devcontainer",
+        "cmake.generator": "Ninja"
+      }
+    }
+  }
+}

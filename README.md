@@ -63,6 +63,17 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 make -C build -j"$(nproc)"
 ```
 
+`Release` is production mode. GCC and Clang builds enable `-O3`, loop unrolling,
+frame-pointer omission, and link-time optimization (LTO) when supported. These
+settings apply to the plugin and every VPP CPU variant. VPP retains its baseline
+CPU flags and runtime variant selection, so release artifacts remain portable
+across the CPUs supported by VPP. Floating-point checks retain their normal
+semantics, including Bloom configuration and expiry validation.
+
+`Debug` and `RelWithDebInfo` use the compiler's normal CMake configuration flags.
+To disable the additional production optimization settings, configure with
+`-DFASTACL_PRODUCTION_OPTIMIZATION=OFF`.
+
 The result is `build/lib/vpp_plugins/fastacl_plugin.so`. Point VPP at it with a
 `plugin_path`, or copy it into VPP's plugin directory:
 
@@ -72,6 +83,37 @@ plugins {
   plugin fastacl_plugin.so { enable }
 }
 ```
+
+### Development container
+
+Open the repository in VS Code and select **Dev Containers: Reopen in
+Container**. The container uses Ubuntu 24.04, the FD.io VPP 25.10 development
+packages, and the compiler, CMake, Ninja, Python API-generation dependencies,
+libnl headers, and GDB. It configures and builds the plugin automatically in
+`build/devcontainer`, separate from host builds.
+
+To rebuild inside the container:
+
+```sh
+cmake --build build/devcontainer
+```
+
+You can also use Docker directly from the repository root:
+
+```sh
+docker build -f .devcontainer/Dockerfile -t fastacl-dev:2510 .
+docker run --rm -it --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspaces/FastACL-Community" fastacl-dev:2510
+cmake -S . -B build/devcontainer -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build/devcontainer
+```
+
+The `VPP_REPO` build argument selects the FD.io package repository; use `2606`
+for the other version covered by CI. In VS Code, change the argument in
+`.devcontainer/devcontainer.json` and rebuild the container. Development
+packages follow the selected repository's available versions. This container
+builds the out-of-tree plugin; it does not launch a VPP dataplane or require
+privileged container access.
 
 ## Quick start
 

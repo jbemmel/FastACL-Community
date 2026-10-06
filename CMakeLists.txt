@@ -10,3 +10,8 @@ find_package(VPP REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/src/plugins)
 
 add_subdirectory(src/plugins/fastacl)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
