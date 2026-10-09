@@ -32,7 +32,7 @@ learning, service matching, and enforcement are not wired into the dataplane.
 | IPv4 /24 insertion and membership lookup | Implemented as C routines; not connected to packet processing |
 | Automatic or explicit Bloom sizing | Implemented; CLI explicit size is a log2 bit count |
 | Approximate expiry, reset, deletion, inspection | Implemented |
-| Trusted learning signals and target/service matching | Not implemented, including TCP-option signal rules |
+| Trusted learning signals and target/service matching | Not implemented, including TCP-option signal rules and SYN cookie challenge completion |
 | Enable/disable enforcement and freeze/recovery transitions | Not implemented |
 | BGP/FRR/Bird or attestation integration and coverage compilation | Concept only |
 | IPv6 membership and exact longest-prefix admission | Concept only |
@@ -55,9 +55,10 @@ intended full design. They are not behaviors enabled by the prototype CLI.
 Learning should be scoped to a protected service or destination prefix, so a
 source observed using one service does not automatically gain access to every
 protected service. A valid-user signal should come from successful application
-interactions or another trusted validation mechanism. Merely receiving a packet
-from an IP address is insufficient: spoofed packets and attack traffic must not
-populate the admission set.
+interactions or another trusted validation mechanism. One optional mechanism is
+successful completion of a TCP SYN cookie challenge, described below. Merely
+receiving a packet from an IP address is insufficient: spoofed packets and
+attack traffic must not populate the admission set.
 
 For each validated source IP, the learner associates the address with a BGP
 prefix supplied by the control plane associated with VPP, typically FRR or
@@ -83,10 +84,49 @@ does not establish that a user is valid or authorize additions to the frozen
 set in members-only mode. Any attack-time revocation mechanism would need an
 explicit policy for narrowing access without admitting new sources.
 
+### TCP SYN cookie challenge
+
+A deployment may treat successful completion of a TCP SYN cookie challenge as
+a signal that the challenged source is a valid member of the protected service.
+The responder encodes the handshake state in the SYN-ACK initial sequence
+number and does not allocate connection state for the SYN. Learning requires
+the client to return an ACK that acknowledges that cookie. A SYN alone, or an
+ACK that does not match the cookie, is not a member signal.
+
+Completion shows that the claimed source received the SYN-ACK and finished the
+handshake for that service. Spoofed SYNs whose senders do not receive the
+SYN-ACK cannot complete the challenge. The signal does not authenticate an
+application user, and a host that can read the SYN-ACK — including an on-path
+observer or a real host controlled by an attacker — can still complete it.
+Policy should accept the signal only for the challenged service, then associate
+the validated source with an authorized prefix using the routing context above.
+
+Record the validation method as SYN cookie challenge completion, with the
+protected service and observation time. Cookie generation, secret rotation,
+and handshake state stay outside the membership lookup path. One way to
+produce the signal is a stateless VPP SYN proxy that turns each SYN into a
+cookie SYN-ACK and keeps no handshake state, as described in
+[Designing a Stateless SYN Proxy for VPP](https://haryachyy.wordpress.com/2026/10/06/designing-a-stateless-syn-proxy-for-vpp/).
+That design is separate from this prototype. In the prototype,
+a learned IPv4 address still covers its whole /24. Peace-time learning may use
+this signal. Members-only mode stays read-only: challenges completed during an
+attack must not add sources to the frozen generation.
+
+During a DDoS attack, members-only mode can automatically limit SYN cookie
+responses to sources already in the frozen set. A proxy that answers every SYN
+sends a SYN-ACK to the claimed source, so spoofed SYNs reflect that traffic
+toward arbitrary addresses. Once members-only mode is enabled for the protected
+service, a membership miss sends no cookie SYN-ACK. Unfamiliar and spoofed
+non-member sources therefore cannot use the proxy as a reflector. A SYN that
+spoofs an admitted member address can still draw a reply toward that member,
+and an approximate lookup can still answer a false positive. Legitimate sources
+outside the frozen set are not challenged until learning resumes.
+
 Candidate records can include:
 
 - Source IP, address family, protected service, and associated BGP prefix.
-- First and last validated observation, observation count, and validation method.
+- First and last validated observation, observation count, and validation method,
+  such as application success or SYN cookie challenge completion.
 - Routing context, route snapshot version, and observation time.
 - Origin AS, AS path, and changes to those attributes over time, when available.
 - Normal traffic characteristics, such as request rate and protocol mix.
@@ -111,11 +151,12 @@ observations may be retained separately for analysis, but must not alter the
 trusted learning records or admission set.
 
 In members-only mode, a lookup miss or a rejecting longest-prefix match is rejected
-for the protected scope. An admitting longest-prefix match is eligible to
-proceed through the remaining FastACL rules and service checks; admission must
-not bypass other mitigation. Addresses covered by an admitted prefix will match
-even if they were never observed individually, unless a more-specific entry
-rejects them. Thus
+for the protected scope. The same miss can suppress a SYN cookie response, so the
+service does not reflect SYN-ACKs toward non-members during the attack. An
+admitting longest-prefix match is eligible to proceed through the remaining
+FastACL rules and service checks; admission must not bypass other mitigation.
+Addresses covered by an admitted prefix will match even if they were never
+observed individually, unless a more-specific entry rejects them. Thus
 "no new sources" means no additions to the frozen coverage set; enforcing it
 literally per user address requires exact /32 or /128 entries.
 
